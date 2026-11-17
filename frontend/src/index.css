@@ -1,0 +1,126 @@
+@import 'tailwindcss';
+/* Public Sans (OFL), bundled locally so the POS works offline. */
+@import '@fontsource-variable/public-sans';
+
+/*
+ * AvantPOS design tokens.
+ * Use the semantic Tailwind utilities these generate (bg-brand-500, text-ink-muted, shadow-card...)
+ * instead of raw colours, so the palette can be changed in one place.
+ *
+ * Look: soft indigo primary, light grey canvas, borderless white cards with a soft shadow.
+ */
+@theme {
+  --font-sans:
+    'Public Sans Variable', 'Public Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+
+  /* Primary (indigo). 500 = main, 600 = hover/active. */
+  --color-brand-50: #f0f0ff;
+  --color-brand-100: #e7e7ff;
+  --color-brand-200: #cfd0ff;
+  --color-brand-300: #b4b5ff;
+  --color-brand-400: #8f91ff;
+  --color-brand-500: #696cff;
+  --color-brand-600: #5f61e6;
+  --color-brand-700: #4f51c9;
+  --color-brand-800: #3f40a3;
+  --color-brand-900: #333480;
+  --color-brand-950: #1f1f4d;
+
+  /* Text: headings / body / hints */
+  --color-ink: #566a7f;
+  --color-ink-muted: #697a8d;
+  --color-ink-subtle: #a1acb8;
+
+  /* Surfaces */
+  --color-canvas: #f5f5f9;
+  --color-surface: #ffffff;
+  --color-line: #d9dee3;
+  --color-line-soft: #eceef1;
+
+  /* Neutral "secondary" (grey buttons, labels) */
+  --color-secondary: #8592a3;
+
+  --shadow-card: 0 2px 6px 0 rgb(67 89 113 / 0.12);
+  --shadow-raised: 0 0.25rem 1rem rgb(161 172 184 / 0.45);
+  --shadow-primary: 0 2px 4px 0 rgb(105 108 255 / 0.4);
+  --shadow-focus: 0 0 0.25rem 0.05rem rgb(105 108 255 / 0.1);
+
+  --radius-lg: 0.5rem;
+
+  --animate-fade-in: fade-in 150ms ease-out;
+  --animate-slide-up: slide-up 180ms ease-out;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-canvas font-sans text-[0.9375rem] text-ink-muted antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply text-ink;
+  }
+
+  /* Visible keyboard focus everywhere, never on mouse click. */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-500;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/*
+ * Receipt printing: while <body> has .printing-receipt, only the receipt
+ * (rendered into #receipt-print) is printed, at the thermal paper width.
+ */
+#receipt-print {
+  display: none;
+}
+
+@media print {
+  body.printing-receipt > *:not(#receipt-print) {
+    display: none !important;
+  }
+
+  body.printing-receipt {
+    background: #fff;
+  }
+
+  body.printing-receipt #receipt-print {
+    display: block;
+  }
+}
