@@ -99,7 +99,7 @@ class UserManagementService
                 'phone' => $data['phone'] ?? null,
                 'status' => UserStatus::Active,
             ]);
-            $user->forceFill(['email_verified_at' => now()])->save();
+            $user->forceFill(['email_verified_at' => now(), 'must_change_password' => true])->save();
             $user->assignRole($role);
             $user->syncBranches($branchIds);
 

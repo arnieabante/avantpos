@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -119,6 +120,23 @@ class AuthController extends Controller
         return ApiResponse::data($this->payload($admin));
     }
 
+    /** Change your own password (required at first sign-in when someone else set it). */
+    public function changePassword(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'current_password' => ['required', 'string'],
+            'password' => ['required', 'string', 'confirmed', 'different:current_password', Password::defaults()],
+        ]);
+        $admin = $this->current($request);
+        if (! Hash::check($data['current_password'], $admin->password)) {
+            throw ValidationException::withMessages(['current_password' => 'The password is incorrect.']);
+        }
+        $admin->forceFill(['password' => $data['password'], 'must_change_password' => false])->save();
+        $this->audit->log('platform.password_changed', $admin, actor: $admin);
+
+        return ApiResponse::data($this->payload($admin->fresh()));
+    }
+
     /** The signed-in admin, freshly read (two-factor columns included). */
     private function current(Request $request): PlatformAdmin
     {
@@ -136,6 +154,7 @@ class AuthController extends Controller
             'email' => $admin->email,
             'role' => $admin->role,
             'two_factor' => $admin->two_factor_confirmed_at !== null,
+            'must_change_password' => (bool) $admin->must_change_password,
         ];
     }
 }

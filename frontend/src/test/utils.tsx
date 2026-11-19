@@ -92,6 +92,7 @@ export function makeAccount(overrides: Partial<Account> = {}): Account {
       phone: '+639171234567',
       email_verified: true,
       has_pin: false,
+      must_change_password: false,
       is_owner: true,
       last_login_at: '2026-11-14T01:00:00+00:00',
     },

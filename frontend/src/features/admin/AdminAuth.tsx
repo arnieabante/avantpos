@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, type ReactNode } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { PageLoader } from '@/components/ui'
+import { ChangePasswordRequiredScreen } from '@/features/auth/ChangePasswordRequiredScreen'
 import { onSessionEvent } from '@/lib/api/client'
 import { ADMIN_SESSION_KEY, AdminAuthContext, adminAuthApi, fetchAdmin, type AdminAuthValue, type PlatformAdmin } from './adminSession'
 import { useAdminAuth } from './useAdminAuth'
@@ -15,9 +16,11 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   useEffect(
     () =>
       onSessionEvent((event) => {
-        if (event.scope === 'admin' && event.type === 'unauthenticated') setAdmin(null)
+        if (event.scope !== 'admin') return
+        if (event.type === 'unauthenticated') setAdmin(null)
+        if (event.type === 'password-change-required') void queryClient.invalidateQueries({ queryKey: ADMIN_SESSION_KEY })
       }),
-    [setAdmin],
+    [setAdmin, queryClient],
   )
 
   const signOut = useCallback(async () => {
@@ -43,11 +46,21 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
 }
 
 export function RequireAdmin() {
-  const { admin, isLoading } = useAdminAuth()
+  const { admin, isLoading, signIn, signOut } = useAdminAuth()
   const location = useLocation()
 
   if (isLoading) return <PageLoader fullScreen />
   if (!admin) return <Navigate to={`/admin/login?redirect=${encodeURIComponent(location.pathname)}`} replace />
+  if (admin.must_change_password) {
+    return (
+      <ChangePasswordRequiredScreen
+        dark
+        email={admin.email}
+        onSubmit={async (values) => signIn(await adminAuthApi.changePassword(values))}
+        onSignOut={() => void signOut()}
+      />
+    )
+  }
   return <Outlet />
 }
 

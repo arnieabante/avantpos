@@ -14,6 +14,8 @@ export interface PlatformAdmin {
   role: string
   /** Two-factor sign-in is on. */
   two_factor?: boolean
+  /** Password chosen by someone else: must set their own before using the admin area. */
+  must_change_password?: boolean
 }
 
 const BASE = '/api/admin/v1/auth'
@@ -23,6 +25,7 @@ export const adminAuthApi = {
   me: () => api.get<PlatformAdmin>(`${BASE}/me`, { skipSessionEvents: true }),
   login: (payload: { email: string; password: string; code?: string }) => api.post<PlatformAdmin>(`${BASE}/login`, payload),
   logout: () => api.send('post', `${BASE}/logout`, undefined, { skipSessionEvents: true }),
+  changePassword: (payload: { current_password: string; password: string; password_confirmation: string }) => api.put<PlatformAdmin>(`${BASE}/password`, payload),
 }
 
 export interface AdminAuthValue {

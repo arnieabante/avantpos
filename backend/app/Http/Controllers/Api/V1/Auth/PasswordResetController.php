@@ -36,6 +36,7 @@ class PasswordResetController extends Controller
             function (User $user, string $password) {
                 $user->forceFill([
                     'password' => $password,
+                    'must_change_password' => false, // chosen by the user
                     'remember_token' => Str::random(60),
                 ])->save();
 

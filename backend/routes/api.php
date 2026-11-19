@@ -99,7 +99,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         ->name('auth.logout');
 
     // ------------------------------------------------- Authenticated tenant users
-    Route::middleware(['auth:sanctum', 'tenant', 'actor.user', 'subscription.writable', 'branch', 'throttle:api'])->group(function () {
+    Route::middleware(['auth:sanctum', 'tenant', 'actor.user', 'password.changed', 'subscription.writable', 'branch', 'throttle:api'])->group(function () {
 
         Route::prefix('auth')->name('auth.')->group(function () {
             Route::get('me', [SessionController::class, 'me'])->name('me');
@@ -532,9 +532,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 Route::prefix('admin/v1')->name('api.admin.v1.')->group(function () {
     Route::post('auth/login', [AdminAuthController::class, 'login'])->middleware('throttle:auth')->name('auth.login');
 
-    Route::middleware(['auth:platform', 'admin.active', 'throttle:api'])->group(function () {
+    Route::middleware(['auth:platform', 'admin.active', 'password.changed:platform', 'throttle:api'])->group(function () {
         Route::get('auth/me', [AdminAuthController::class, 'me'])->name('auth.me');
         Route::post('auth/logout', [AdminAuthController::class, 'logout'])->name('auth.logout');
+        Route::put('auth/password', [AdminAuthController::class, 'changePassword'])->middleware('throttle:6,1')->name('auth.password');
         Route::post('auth/2fa/setup', [AdminAuthController::class, 'twoFactorSetup'])->name('auth.2fa.setup');
         Route::post('auth/2fa/confirm', [AdminAuthController::class, 'twoFactorConfirm'])->name('auth.2fa.confirm');
         Route::post('auth/2fa/disable', [AdminAuthController::class, 'twoFactorDisable'])->name('auth.2fa.disable');

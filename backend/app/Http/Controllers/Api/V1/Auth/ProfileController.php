@@ -51,7 +51,7 @@ class ProfileController extends Controller
         $user = $request->user();
 
         DB::transaction(function () use ($request, $user) {
-            $user->forceFill(['password' => $request->string('password')->toString()])->save();
+            $user->forceFill(['password' => $request->string('password')->toString(), 'must_change_password' => false])->save();
 
             $currentToken = $user->currentAccessToken();
             $user->tokens()

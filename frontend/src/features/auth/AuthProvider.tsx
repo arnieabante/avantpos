@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () =>
       onSessionEvent((event) => {
         if (event.scope !== 'tenant') return
-        if (event.type === 'branch-invalid') {
+        if (event.type === 'branch-invalid' || event.type === 'password-change-required') {
           // Reload the account: its branch list no longer contains the selected branch,
           // so pickActiveBranch() falls back to an accessible one.
           void queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY })

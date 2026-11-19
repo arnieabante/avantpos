@@ -3,6 +3,8 @@ import { Navigate, Outlet, useLocation, useSearchParams } from 'react-router'
 import { RefreshCw, ShieldAlert } from 'lucide-react'
 import { Button, EmptyState, PageLoader } from '@/components/ui'
 import { safeRedirectPath } from '@/lib/utils'
+import { authApi } from './api'
+import { ChangePasswordRequiredScreen } from './ChangePasswordRequiredScreen'
 import { SessionBlockedScreen } from './SessionBlockedScreen'
 import { useAuth } from './useAuth'
 
@@ -22,7 +24,7 @@ function SessionLoadFailed() {
 
 /** Signed-in tenant users only. Guests go to /login?redirect=<current page>. */
 export function RequireAuth() {
-  const { session, isLoading, loadError } = useAuth()
+  const { session, isLoading, loadError, refresh, signOut } = useAuth()
   const location = useLocation()
 
   if (isLoading) return <PageLoader fullScreen label="Loading AvantPOS…" />
@@ -34,6 +36,19 @@ export function RequireAuth() {
   }
 
   if (session.status === 'blocked') return <SessionBlockedScreen error={session.error} />
+
+  if (session.account.user.must_change_password) {
+    return (
+      <ChangePasswordRequiredScreen
+        email={session.account.user.email}
+        onSubmit={async (values) => {
+          await authApi.changePassword(values)
+          await refresh()
+        }}
+        onSignOut={() => void signOut()}
+      />
+    )
+  }
 
   return <Outlet />
 }

@@ -62,7 +62,7 @@ Artisan::command('avantpos:admin {email} {--name=} {--role=super_admin : super_a
     $password = (string) ($this->option('password') ?: Str::password(16, symbols: false));
     $admin = PlatformAdmin::query()->firstWhere('email', $email);
     if ($admin) {
-        $admin->forceFill(['password' => $password, 'is_active' => true, 'remember_token' => null])->save();
+        $admin->forceFill(['password' => $password, 'is_active' => true, 'remember_token' => null, 'must_change_password' => true])->save();
         if ($this->option('reset-2fa')) {
             $admin->forceFill(['two_factor_secret' => null, 'two_factor_confirmed_at' => null])->save();
             $this->info('Two-factor sign-in turned off; set it up again after signing in.');
@@ -71,6 +71,7 @@ Artisan::command('avantpos:admin {email} {--name=} {--role=super_admin : super_a
     } else {
         $admin = PlatformAdmin::query()->create(['name' => $this->option('name') ?: Str::before($email, '@'), 'email' => $email,
             'password' => $password, 'role' => $role, 'is_active' => true]);
+        $admin->forceFill(['must_change_password' => true])->save();
         $this->info("Platform admin created: {$admin->email} ({$role}).");
     }
     app(AuditLogger::class)->log('platform.admin_cli', $admin, new: ['email' => $admin->email, 'role' => $admin->role]);

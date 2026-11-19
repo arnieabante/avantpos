@@ -3,6 +3,7 @@
 use App\Exceptions\DomainException;
 use App\Http\Middleware\EnsureActivePlatformAdmin;
 use App\Http\Middleware\EnsureAdminRole;
+use App\Http\Middleware\EnsurePasswordChanged;
 use App\Http\Middleware\EnsureSubscriptionWritable;
 use App\Http\Middleware\EnsureTerminalActor;
 use App\Http\Middleware\EnsureUserActor;
@@ -50,6 +51,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'subscription.writable' => EnsureSubscriptionWritable::class,
             'admin.role' => EnsureAdminRole::class,
             'admin.active' => EnsureActivePlatformAdmin::class,
+            'password.changed' => EnsurePasswordChanged::class,
             'branch' => ResolveBranch::class,
             'actor.user' => EnsureUserActor::class,
             'actor.terminal' => EnsureTerminalActor::class,

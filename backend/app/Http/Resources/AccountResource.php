@@ -40,6 +40,7 @@ class AccountResource extends ApiResource
                 'phone' => $user->phone,
                 'email_verified' => $user->hasVerifiedEmail(),
                 'has_pin' => $user->hasPin(),
+                'must_change_password' => (bool) $user->must_change_password,
                 'is_owner' => $tenant->owner_user_id === $user->id,
                 'last_login_at' => $user->last_login_at?->toIso8601String(),
             ],

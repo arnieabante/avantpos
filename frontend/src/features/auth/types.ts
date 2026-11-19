@@ -7,6 +7,8 @@ export interface AccountUser {
   phone: string | null
   email_verified: boolean
   has_pin: boolean
+  /** Password chosen by someone else: must set their own before using the app. */
+  must_change_password: boolean
   is_owner: boolean
   last_login_at: string | null
 }

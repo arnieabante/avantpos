@@ -33,6 +33,7 @@ class User extends Authenticatable implements MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'last_login_at' => 'datetime',
+            'must_change_password' => 'boolean',
             'password' => 'hashed',
             'status' => UserStatus::class,
         ];

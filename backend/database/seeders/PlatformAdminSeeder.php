@@ -34,13 +34,15 @@ class PlatformAdminSeeder extends Seeder
         $generated = ! $password;
         $password = $password ?: Str::password(16, symbols: false);
 
-        PlatformAdmin::query()->create([
+        $admin = PlatformAdmin::query()->create([
             'name' => 'AvantPOS Super Admin',
             'email' => $email,
             'password' => $password,
             'role' => PlatformAdmin::ROLE_SUPER_ADMIN,
             'is_active' => true,
         ]);
+
+        $admin->forceFill(['must_change_password' => true])->save();
 
         $this->command?->info("Platform admin created: {$email}");
         if ($generated) {

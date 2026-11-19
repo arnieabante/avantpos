@@ -70,7 +70,7 @@ class BusinessSeeder extends Seeder
                     'vat_registered' => $b['vat_registered'], 'owner_name' => $ownerData['name'], 'email' => $ownerData['email'],
                     'phone' => $b['phone'], 'password' => $passwords[$ownerData['email']],
                 ]);
-                $owner->forceFill(['email_verified_at' => now()])->save();
+                $owner->forceFill(['email_verified_at' => now(), 'must_change_password' => true])->save();
 
                 // Trial of the chosen plan.
                 $trialEnds = now()->addDays(max(1, (int) $plan->trial_days));
@@ -94,7 +94,7 @@ class BusinessSeeder extends Seeder
                             continue;
                         }
                         $user = User::query()->create(['name' => $u['name'], 'email' => Str::lower($u['email']), 'password' => $passwords[$u['email']], 'status' => UserStatus::Active]);
-                        $user->forceFill(['email_verified_at' => now()])->save();
+                        $user->forceFill(['email_verified_at' => now(), 'must_change_password' => true])->save();
                         $user->assignRole(Role::forCurrentTenant()->where('key', $u['role'])->firstOrFail());
                         $user->syncBranches([$main->id]);
                         if (! $production) {

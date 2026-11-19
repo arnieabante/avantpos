@@ -53,6 +53,8 @@ export type SessionEvent =
   | { type: 'blocked'; scope: ApiScope; error: ApiError }
   /** The selected branch was deactivated or access was removed. */
   | { type: 'branch-invalid'; scope: ApiScope }
+  /** The account must set its own password first (password chosen by someone else). */
+  | { type: 'password-change-required'; scope: ApiScope }
 
 type Listener = (event: SessionEvent) => void
 const listeners = new Set<Listener>()
@@ -151,6 +153,8 @@ http.interceptors.response.use(
         emit({ type: 'blocked', scope, error: apiError })
       } else if (apiError.code === ErrorCode.BranchForbidden) {
         emit({ type: 'branch-invalid', scope })
+      } else if (apiError.code === 'PASSWORD_CHANGE_REQUIRED') {
+        emit({ type: 'password-change-required', scope })
       }
     }
 

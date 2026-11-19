@@ -43,6 +43,7 @@ class AdminTeamController extends Controller
             'password' => ['required', 'string', 'confirmed', Password::defaults()],
         ]);
         $admin = PlatformAdmin::query()->create([...$data, 'email' => Str::lower($data['email']), 'is_active' => true]);
+        $admin->forceFill(['must_change_password' => true])->save();
         $this->audit->log('platform.admin_created', $admin, new: ['email' => $admin->email, 'role' => $admin->role], actor: $this->me($request));
 
         return ApiResponse::data($this->present($admin->fresh()), 201);
@@ -75,7 +76,7 @@ class AdminTeamController extends Controller
     public function resetPassword(Request $request, PlatformAdmin $admin): JsonResponse
     {
         $data = $request->validate(['password' => ['required', 'string', 'confirmed', Password::defaults()]]);
-        $admin->forceFill(['password' => $data['password'], 'remember_token' => null])->save();
+        $admin->forceFill(['password' => $data['password'], 'remember_token' => null, 'must_change_password' => true])->save();
         $this->audit->log('platform.admin_password_reset', $admin, actor: $this->me($request));
 
         return ApiResponse::message("{$admin->name} can now sign in with the new password.");
