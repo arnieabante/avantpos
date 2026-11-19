@@ -89,7 +89,7 @@ class PlatformController extends Controller
     public function payments(Request $request): JsonResponse
     {
         $request->validate(['status' => ['nullable', Rule::in(['pending', 'paid', 'failed'])], 'per_page' => ['nullable', 'integer', 'max:100']]);
-        $page = BillingPayment::withoutTenantScope()->with(['tenant', 'invoice.plan', 'verifier'])
+        $page = BillingPayment::withoutTenantScope()->with(['tenant', 'invoice' => fn ($q) => $q->withoutTenantScope()->with('plan'), 'verifier'])
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->input('status')))
             ->latest('id')->paginate($request->integer('per_page', 25));
 
@@ -206,7 +206,7 @@ class PlatformController extends Controller
     public function tickets(Request $request): JsonResponse
     {
         $request->validate(['status' => ['nullable', Rule::in(SupportTicket::STATUSES)], 'per_page' => ['nullable', 'integer', 'max:100']]);
-        $page = SupportTicket::withoutTenantScope()->with(['tenant', 'user', 'assignee'])
+        $page = SupportTicket::withoutTenantScope()->with(['tenant', 'user' => fn ($q) => $q->withoutTenantScope(), 'assignee'])
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->input('status')))
             ->orderByRaw("FIELD(status, 'open', 'pending', 'resolved', 'closed')")
             ->orderByRaw("FIELD(priority, 'urgent', 'high', 'normal', 'low')")->latest('updated_at')
@@ -217,7 +217,7 @@ class PlatformController extends Controller
 
     public function showTicket(int $ticket): JsonResponse
     {
-        $t = SupportTicket::withoutTenantScope()->with(['tenant', 'user', 'assignee'])->findOrFail($ticket);
+        $t = SupportTicket::withoutTenantScope()->with(['tenant', 'user' => fn ($q) => $q->withoutTenantScope(), 'assignee'])->findOrFail($ticket);
         $messages = DB::table('ticket_messages')->where('support_ticket_id', $t->id)->orderBy('id')->get();
         $admins = PlatformAdmin::query()->pluck('name', 'id');
         $users = DB::table('users')->where('tenant_id', $t->tenant_id)->pluck('name', 'id');

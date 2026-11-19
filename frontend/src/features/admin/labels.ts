@@ -28,3 +28,9 @@ export const ADMIN_FEATURE_LABELS: Record<string, string> = {
   api_access: 'API access',
   priority_support: 'Priority support',
 }
+
+export const ADMIN_ROLES: Record<'super_admin' | 'billing' | 'support', { label: string; tone: 'brand' | 'warning' | 'neutral'; description: string }> = {
+  super_admin: { label: 'Super admin', tone: 'brand', description: 'Everything, including businesses, settings and this admin team.' },
+  billing: { label: 'Billing', tone: 'warning', description: 'Plans, payments and business subscriptions (including enabling access).' },
+  support: { label: 'Support', tone: 'neutral', description: 'Support tickets and the activity log; can view businesses.' },
+}

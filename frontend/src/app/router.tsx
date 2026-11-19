@@ -186,6 +186,7 @@ export const routes: RouteObject[] = [
                   { path: 'tickets', lazy: page(() => import('@/features/admin/pages/AdminTicketsPage')) },
                   { path: 'tickets/:ticketId', lazy: page(() => import('@/features/admin/pages/AdminTicketsPage')) },
                   { path: 'activity', lazy: page(() => import('@/features/admin/pages/AdminActivityPage')) },
+                  { path: 'team', lazy: page(() => import('@/features/admin/pages/AdminTeamPage')) },
                   { path: 'settings', lazy: page(() => import('@/features/admin/pages/AdminSettingsPage')) },
                 ],
               },

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\V1\AdminTeamController;
 use App\Http\Controllers\Admin\V1\AuthController as AdminAuthController;
 use App\Http\Controllers\Admin\V1\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\V1\PlatformController;
@@ -531,7 +532,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 Route::prefix('admin/v1')->name('api.admin.v1.')->group(function () {
     Route::post('auth/login', [AdminAuthController::class, 'login'])->middleware('throttle:auth')->name('auth.login');
 
-    Route::middleware(['auth:platform', 'throttle:api'])->group(function () {
+    Route::middleware(['auth:platform', 'admin.active', 'throttle:api'])->group(function () {
         Route::get('auth/me', [AdminAuthController::class, 'me'])->name('auth.me');
         Route::post('auth/logout', [AdminAuthController::class, 'logout'])->name('auth.logout');
         Route::post('auth/2fa/setup', [AdminAuthController::class, 'twoFactorSetup'])->name('auth.2fa.setup');
@@ -565,6 +566,13 @@ Route::prefix('admin/v1')->name('api.admin.v1.')->group(function () {
             Route::post('tenants/{tenant}/suspend', [AdminTenantController::class, 'suspend'])->name('tenants.suspend');
             Route::post('tenants/{tenant}/activate', [AdminTenantController::class, 'activate'])->name('tenants.activate');
             Route::put('settings', [PlatformController::class, 'saveSettings'])->name('settings.update');
+
+            // Admin team: AvantPOS staff accounts and their roles.
+            Route::get('admins', [AdminTeamController::class, 'index'])->name('admins.index');
+            Route::post('admins', [AdminTeamController::class, 'store'])->name('admins.store');
+            Route::patch('admins/{admin}', [AdminTeamController::class, 'update'])->whereNumber('admin')->name('admins.update');
+            Route::post('admins/{admin}/password', [AdminTeamController::class, 'resetPassword'])->whereNumber('admin')->name('admins.password');
+            Route::post('admins/{admin}/reset-two-factor', [AdminTeamController::class, 'resetTwoFactor'])->whereNumber('admin')->name('admins.two-factor');
         });
     });
 });

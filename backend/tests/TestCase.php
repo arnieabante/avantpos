@@ -8,6 +8,7 @@ use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\Terminal;
 use App\Models\User;
+use App\Tenancy\BranchContext;
 use App\Tenancy\TenantContext;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\SubscriptionPlanSeeder;
@@ -123,6 +124,23 @@ abstract class TestCase extends BaseTestCase
      * @param  callable(Tenant): T  $callback
      * @return T
      */
+    /**
+     * Each simulated HTTP request starts like a real one: per-request state
+     * (tenant / branch context, bound with scoped()) left over from an earlier
+     * request or from test setup is dropped. Without this, a request could run
+     * with a tenant it would never have in production (and hide bugs, e.g. a
+     * platform admin page querying tenant data without lifting the scope).
+     */
+    public function call($method, $uri, $parameters = [], $cookies = [], $files = [], $server = [], $content = null)
+    {
+        // Reset the state of the existing instances (controllers and services
+        // resolved by earlier requests keep references to them).
+        app(TenantContext::class)->forget();
+        app(BranchContext::class)->forget();
+
+        return parent::call($method, $uri, $parameters, $cookies, $files, $server, $content);
+    }
+
     public function asTenant(Tenant $tenant, callable $callback): mixed
     {
         return app(TenantContext::class)->runAs($tenant, $callback(...));

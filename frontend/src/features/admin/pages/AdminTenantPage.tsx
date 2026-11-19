@@ -17,7 +17,7 @@ export default function AdminTenantPage() {
   const queryClient = useQueryClient()
   const toast = useToast()
   const q = useQuery({ queryKey: adminKeys.tenant(id), queryFn: () => adminApi.tenant(id) })
-  const [dialog, setDialog] = useState<'suspend' | 'subscription' | null>(null)
+  const [dialog, setDialog] = useState<'suspend' | 'subscription' | 'enable' | null>(null)
   const [error, setError] = useState<ApiError | null>(null)
   const role = admin?.role ?? ''
 
@@ -43,6 +43,9 @@ export default function AdminTenantPage() {
         actions={
           <>
             <Badge tone={TENANT_TONE[t.status] ?? 'neutral'}>{humanize(t.status)}</Badge>
+            {['super_admin', 'billing'].includes(role) && t.subscription && (t.subscription.overdue || t.subscription.status === 'trialing') && (
+              <Button onClick={() => setDialog('enable')}>Enable access</Button>
+            )}
             {['super_admin', 'billing'].includes(role) && (
               <Button variant="outline" onClick={() => setDialog('subscription')}>
                 Adjust subscription
@@ -95,6 +98,17 @@ export default function AdminTenantPage() {
                 items={[
                   { label: 'Plan', value: `${t.subscription.plan.name} (${t.subscription.billing_cycle})` },
                   { label: 'Status', value: humanize(t.subscription.status) + (t.subscription.cancel_at_period_end ? ' · cancelling' : '') },
+                  {
+                    label: 'Due date',
+                    value: t.subscription.due_at ? (
+                      <span className={t.subscription.overdue ? 'font-medium text-[#ff3e1d]' : undefined}>
+                        {formatDate(t.subscription.due_at)}
+                        {t.subscription.overdue && ' · overdue'}
+                      </span>
+                    ) : (
+                      '—'
+                    ),
+                  },
                   ...(t.subscription.trial_ends_at ? [{ label: 'Trial ends', value: formatDate(t.subscription.trial_ends_at) }] : []),
                   ...(t.subscription.current_period_end ? [{ label: 'Period ends', value: formatDate(t.subscription.current_period_end) }] : []),
                   ...(t.subscription.grace_ends_at ? [{ label: 'Grace ends', value: formatDate(t.subscription.grace_ends_at) }] : []),
@@ -160,6 +174,7 @@ export default function AdminTenantPage() {
 
       {dialog === 'suspend' && <SuspendModal tenant={t} onClose={() => setDialog(null)} onDone={(n) => done(n, `${t.name} suspended`)} />}
       {dialog === 'subscription' && <SubscriptionModal tenant={t} onClose={() => setDialog(null)} onDone={(n) => done(n, 'Subscription updated')} />}
+      {dialog === 'enable' && <SubscriptionModal tenant={t} enable onClose={() => setDialog(null)} onDone={(n) => done(n, `${t.name} can use AvantPOS again`)} />}
     </div>
   )
 }
@@ -207,17 +222,24 @@ function SuspendModal({ tenant, onDone, onClose }: { tenant: TenantDetail; onDon
   )
 }
 
-function SubscriptionModal({ tenant, onDone, onClose }: { tenant: TenantDetail; onDone: (t: TenantDetail) => void; onClose: () => void }) {
+/**
+ * Adjust a subscription, or (enable) turn a business on by hand: active and paid
+ * for one more period from today or from the current paid-until date, whichever
+ * is later (e.g. paid in cash at the office, or a complimentary month).
+ */
+function SubscriptionModal({ tenant, enable = false, onDone, onClose }: { tenant: TenantDetail; enable?: boolean; onDone: (t: TenantDetail) => void; onClose: () => void }) {
   const plans = useQuery({ queryKey: adminKeys.plans, queryFn: adminApi.plans })
   const s = tenant.subscription
+  const cycle = s?.billing_cycle ?? 'monthly'
   const [v, setV] = useState({
-    plan: s?.plan.code ?? 'free',
-    billing_cycle: s?.billing_cycle ?? 'monthly',
-    status: s?.status === 'grace' ? 'past_due' : (s?.status ?? 'active'),
+    plan: s?.plan.code ?? '',
+    billing_cycle: cycle,
+    status: enable ? 'active' : s?.status === 'grace' ? 'past_due' : (s?.status ?? 'active'),
     trial_ends_at: s?.trial_ends_at?.slice(0, 10) ?? '',
-    current_period_end: s?.current_period_end?.slice(0, 10) ?? '',
+    current_period_end: enable ? nextPeriodEnd(s?.current_period_end ?? null, cycle) : (s?.current_period_end?.slice(0, 10) ?? ''),
     note: '',
   })
+  const offered = (plans.data?.plans ?? []).filter((p) => p.is_active || p.code === s?.plan.code)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<ApiError | null>(null)
 
@@ -226,8 +248,12 @@ function SubscriptionModal({ tenant, onDone, onClose }: { tenant: TenantDetail; 
       open
       onClose={onClose}
       size="md"
-      title="Adjust subscription"
-      description="For trial extensions, complimentary periods and corrections. Recorded in the history and activity log."
+      title={enable ? `Enable access for ${tenant.name}` : 'Adjust subscription'}
+      description={
+        enable
+          ? 'Marks the subscription active and paid until the date below, so the business can sell again. Use it for payments received outside AvantPOS or complimentary time. Recorded in the history and activity log.'
+          : 'For trial extensions, complimentary periods and corrections. Recorded in the history and activity log.'
+      }
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
@@ -247,7 +273,7 @@ function SubscriptionModal({ tenant, onDone, onClose }: { tenant: TenantDetail; 
               }
             }}
           >
-            Save
+            {enable ? 'Enable access' : 'Save'}
           </Button>
         </>
       }
@@ -257,7 +283,8 @@ function SubscriptionModal({ tenant, onDone, onClose }: { tenant: TenantDetail; 
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField label="Plan">
             <Select value={v.plan} onChange={(e) => setV({ ...v, plan: e.target.value })}>
-              {(plans.data?.plans ?? []).map((p) => (
+              {!v.plan && <option value="">Choose a plan…</option>}
+              {offered.map((p) => (
                 <option key={p.code} value={p.code}>
                   {p.name}
                 </option>
@@ -283,15 +310,26 @@ function SubscriptionModal({ tenant, onDone, onClose }: { tenant: TenantDetail; 
               <Input type="date" value={v.trial_ends_at} onChange={(e) => setV({ ...v, trial_ends_at: e.target.value })} />
             </FormField>
           ) : (
-            <FormField label="Paid until" hint="Leave empty for no end (e.g. Free)">
+            <FormField label="Paid until" required={v.status === 'active'}>
               <Input type="date" value={v.current_period_end} onChange={(e) => setV({ ...v, current_period_end: e.target.value })} />
             </FormField>
           )}
         </div>
         <FormField label="Why" required>
-          <Input value={v.note} maxLength={255} onChange={(e) => setV({ ...v, note: e.target.value })} placeholder="e.g. One free month for the referral" />
+          <Input value={v.note} maxLength={255} onChange={(e) => setV({ ...v, note: e.target.value })} placeholder={enable ? 'e.g. Paid ₱1,999 cash at the office, OR #1234' : 'e.g. One free month for the referral'} />
         </FormField>
       </div>
     </Modal>
   )
+}
+
+/** One billing period after the later of today and the current paid-until date (yyyy-mm-dd). */
+function nextPeriodEnd(currentEnd: string | null, cycle: 'monthly' | 'annual'): string {
+  const today = new Date()
+  const from = currentEnd && new Date(currentEnd) > today ? new Date(currentEnd) : today
+  const next = new Date(from)
+  if (cycle === 'annual') next.setFullYear(next.getFullYear() + 1)
+  else next.setMonth(next.getMonth() + 1)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(next.getDate())}`
 }

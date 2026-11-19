@@ -36,6 +36,9 @@ export interface TenantRow {
   plan: string | null
   subscription_status: string | null
   ends_at: string | null
+  /** When the business next has to pay (trial end, paid until, or pay-by date when overdue). */
+  due_at: string | null
+  overdue: boolean
   usage: Record<'branches' | 'users' | 'terminals' | 'products', number>
   created_at: string
 }
@@ -59,6 +62,8 @@ export interface TenantDetail extends TenantRow {
     grace_ends_at: string | null
     cancel_at_period_end: boolean
     pending_plan: string | null
+    due_at: string | null
+    overdue: boolean
   } | null
   invoices: Array<{ id: number; number: string; kind: string; plan: string | null; total: string; status: string; due_at: string | null; paid_at: string | null }>
   history: Array<{ type: string; from: string | null; to: string | null; by: string | null; effective_at: string | null }>
@@ -151,6 +156,19 @@ export interface PlatformSettingsData {
 
 const clean = (p: Record<string, unknown>) => Object.fromEntries(Object.entries(p).filter(([, v]) => v !== undefined && v !== '' && v !== null))
 
+export type AdminRole = 'super_admin' | 'billing' | 'support'
+
+export interface TeamAdmin {
+  id: number
+  name: string
+  email: string
+  role: AdminRole
+  is_active: boolean
+  two_factor: boolean
+  last_login_at: string | null
+  created_at: string | null
+}
+
 export const adminKeys = {
   all: ['admin'] as const,
   dashboard: ['admin', 'dashboard'] as const,
@@ -163,6 +181,7 @@ export const adminKeys = {
   tickets: (f: Record<string, unknown>) => ['admin', 'tickets', f] as const,
   ticket: (id: number) => ['admin', 'ticket', id] as const,
   settings: ['admin', 'settings'] as const,
+  team: ['admin', 'team'] as const,
 }
 
 export const adminApi = {
@@ -185,6 +204,11 @@ export const adminApi = {
   updateTicket: (id: number, body: Record<string, unknown>) => api.patch<AdminTicket>(`${A}/tickets/${id}`, body, opts),
   settings: () => api.get<PlatformSettingsData>(`${A}/settings`, opts),
   saveSettings: (body: Partial<Omit<PlatformSettingsData, 'gateways'>>) => api.put<PlatformSettingsData>(`${A}/settings`, body, opts),
+  team: () => api.get<TeamAdmin[]>(`${A}/admins`, opts),
+  addAdmin: (body: { name: string; email: string; role: AdminRole; password: string; password_confirmation: string }) => api.post<TeamAdmin>(`${A}/admins`, body, opts),
+  updateAdmin: (id: number, body: Partial<Pick<TeamAdmin, 'name' | 'role' | 'is_active'>>) => api.patch<TeamAdmin>(`${A}/admins/${id}`, body, opts),
+  resetAdminPassword: (id: number, password: string, confirmation: string) => api.send('post', `${A}/admins/${id}/password`, { password, password_confirmation: confirmation }, opts),
+  resetAdminTwoFactor: (id: number) => api.post<TeamAdmin>(`${A}/admins/${id}/reset-two-factor`, undefined, opts),
   twoFactorSetup: () => api.post<{ secret: string; otpauth_uri: string }>(`${A}/auth/2fa/setup`, undefined, opts),
   twoFactorConfirm: (code: string) => api.post<{ two_factor: boolean }>(`${A}/auth/2fa/confirm`, { code }, opts),
   twoFactorDisable: (password: string, code: string) => api.post<{ two_factor: boolean }>(`${A}/auth/2fa/disable`, { password, code }, opts),

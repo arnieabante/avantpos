@@ -110,8 +110,12 @@ Xendit / PayMongo are used **only** for AvantPOS → tenant subscription billing
 - Payment providers behind `Billing\Gateways\PaymentGateway` (Xendit invoices, PayMongo checkout sessions,
   manual bank transfer verified by an admin). Keys only in env (`BILLING_GATEWAY`, `XENDIT_*`, `PAYMONGO_*`).
   Webhooks: `POST /api/v1/billing/webhooks/{gateway}`, verified (token / HMAC) and stored once per event (`webhook_events`).
-- Platform admin: dashboard (MRR = monthly value of paying subscriptions, ARR = MRR × 12), tenants, plans,
-  payments, activity log, settings, support tickets; roles super_admin / billing / support; TOTP two-factor sign-in.
+- Platform admin: dashboard (MRR = monthly value of paying subscriptions, ARR = MRR × 12), tenants (plan, due date,
+  overdue / due-soon filters, suspend, adjust subscription, **Enable access** = active and paid until a date, with a
+  reason), plans, payments, activity log, settings, support tickets, **admin team** (super admins add AvantPOS staff,
+  set roles super_admin / billing / support, reset passwords and two-factor; never themselves, always one super admin
+  left; deactivated admins are signed out on their next request); TOTP two-factor sign-in.
+  Recovery from the server: `php artisan avantpos:admin <email> [--role=] [--reset-2fa]`.
 
 ## 7. API conventions
 

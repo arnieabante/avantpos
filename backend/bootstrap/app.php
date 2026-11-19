@@ -1,6 +1,7 @@
 <?php
 
 use App\Exceptions\DomainException;
+use App\Http\Middleware\EnsureActivePlatformAdmin;
 use App\Http\Middleware\EnsureAdminRole;
 use App\Http\Middleware\EnsureSubscriptionWritable;
 use App\Http\Middleware\EnsureTerminalActor;
@@ -48,6 +49,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenant' => ResolveTenant::class,
             'subscription.writable' => EnsureSubscriptionWritable::class,
             'admin.role' => EnsureAdminRole::class,
+            'admin.active' => EnsureActivePlatformAdmin::class,
             'branch' => ResolveBranch::class,
             'actor.user' => EnsureUserActor::class,
             'actor.terminal' => EnsureTerminalActor::class,

@@ -16,8 +16,10 @@ use App\Services\Audit\AuditLogger;
 use App\Support\Api\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Businesses on the platform: list, details, activation / suspension and
@@ -33,6 +35,7 @@ class TenantController extends Controller
             'search' => ['nullable', 'string', 'max:100'],
             'status' => ['nullable', Rule::in(array_column(TenantStatus::cases(), 'value'))],
             'plan' => ['nullable', 'string', 'max:40'],
+            'due' => ['nullable', Rule::in(['overdue', 'soon'])],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
         $term = trim((string) $request->input('search'));
@@ -42,6 +45,10 @@ class TenantController extends Controller
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->input('status')))
             ->when($request->filled('plan'), fn ($q) => $q->whereHas('subscription', fn ($s) => $s
                 ->whereIn('subscription_plan_id', SubscriptionPlan::query()->where('code', $request->input('plan'))->select('id'))))
+            ->when($request->input('due') === 'overdue', fn ($q) => $q->whereHas('subscription', fn ($s) => $s->whereIn('status', ['past_due', 'grace', 'expired'])))
+            ->when($request->input('due') === 'soon', fn ($q) => $q->whereHas('subscription', fn ($s) => $s->where(fn ($w) => $w
+                ->where(fn ($t) => $t->where('status', 'trialing')->whereBetween('trial_ends_at', [now(), now()->addDays(7)]))
+                ->orWhere(fn ($a) => $a->where('status', 'active')->where('cancel_at_period_end', false)->whereBetween('current_period_end', [now(), now()->addDays(7)])))))
             ->latest('id')
             ->paginate($request->integer('per_page', 25));
 
@@ -78,6 +85,7 @@ class TenantController extends Controller
                 'current_period_start' => $sub->current_period_start?->toIso8601String(), 'current_period_end' => $sub->current_period_end?->toIso8601String(),
                 'grace_ends_at' => $sub->grace_ends_at?->toIso8601String(), 'cancel_at_period_end' => $sub->cancel_at_period_end,
                 'pending_plan' => $sub->pendingPlan?->name,
+                ...self::due($sub),
             ] : null,
             'invoices' => SubscriptionInvoice::withoutTenantScope()->with('plan')->where('tenant_id', $tenant->id)->latest('id')->limit(24)->get()
                 ->map(fn ($i) => ['id' => $i->id, 'number' => $i->number, 'kind' => $i->kind, 'plan' => $i->plan?->name, 'total' => $i->total,
@@ -133,6 +141,17 @@ class TenantController extends Controller
         ]);
         $sub = Subscription::withoutTenantScope()->with('plan')->where('tenant_id', $tenant->id)->latest('id')->firstOrFail();
         $plan = SubscriptionPlan::query()->where('code', $data['plan'])->firstOrFail();
+        if (! $plan->is_active && $plan->id !== $sub->subscription_plan_id) {
+            throw ValidationException::withMessages(['plan' => 'This plan is no longer offered.']);
+        }
+        // Active (e.g. enabled by hand) needs a paid-until date in the future, or the nightly billing cycle
+        // would mark the business overdue again straight away.
+        if ($data['status'] === 'active' && ! $plan->isFree()) {
+            $end = $data['current_period_end'] ?? $sub->current_period_end?->toDateString();
+            if (! $end || ! now()->startOfDay()->lessThan(Carbon::parse($end))) {
+                throw ValidationException::withMessages(['current_period_end' => 'Choose a paid-until date after today.']);
+            }
+        }
         $before = ['plan' => $sub->plan?->code, 'status' => $sub->status->value, 'trial_ends_at' => $sub->trial_ends_at?->toIso8601String(), 'current_period_end' => $sub->current_period_end?->toIso8601String()];
 
         DB::transaction(function () use ($sub, $plan, $data, $tenant, $request) {
@@ -197,9 +216,29 @@ class TenantController extends Controller
             'plan' => $sub?->plan?->name,
             'subscription_status' => $sub?->status->value,
             'ends_at' => ($sub?->status === SubscriptionStatus::Trialing ? $sub->trial_ends_at : $sub?->current_period_end)?->toIso8601String(),
+            ...self::due($sub),
             'usage' => collect($counts)->map(fn ($c) => (int) ($c[$t->id] ?? 0))->all(),
             'created_at' => $t->created_at?->toIso8601String(),
         ];
+    }
+
+    /**
+     * When the business next has to pay: trial end, paid-until date, or the
+     * end of the grace days when the payment is already overdue.
+     *
+     * @return array{due_at: string|null, overdue: bool}
+     */
+    public static function due(?Subscription $sub): array
+    {
+        $at = match ($sub?->status) {
+            SubscriptionStatus::Trialing => $sub->trial_ends_at,
+            SubscriptionStatus::PastDue, SubscriptionStatus::Grace => $sub->grace_ends_at ?? $sub->current_period_end,
+            null => null,
+            default => $sub->current_period_end,
+        };
+        $overdue = in_array($sub?->status, [SubscriptionStatus::PastDue, SubscriptionStatus::Grace, SubscriptionStatus::Expired], true);
+
+        return ['due_at' => $at?->toIso8601String(), 'overdue' => $overdue];
     }
 
     private function admin(Request $request): PlatformAdmin

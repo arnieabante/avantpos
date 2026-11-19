@@ -12,13 +12,26 @@ import { TENANT_TONE } from '../labels'
 /** /admin/tenants — every business on the platform. */
 export default function AdminTenantsPage() {
   const navigate = useNavigate()
-  const [f, setF] = useState<{ page: number; search?: string; status?: string }>({ page: 1 })
+  const [f, setF] = useState<{ page: number; search?: string; status?: string; due?: string }>({ page: 1 })
   const q = useQuery({ queryKey: adminKeys.tenants(f), queryFn: () => adminApi.tenants(f), placeholderData: (p) => p })
 
   const columns: Column<TenantRow>[] = [
     { key: 'name', header: 'Business', render: (t) => <span><span className="font-medium text-ink">{t.name}</span><span className="block text-xs text-ink-subtle">{t.owner?.email ?? t.email}</span></span> },
     { key: 'plan', header: 'Plan', render: (t) => `${t.plan ?? '—'}${t.subscription_status ? ` · ${humanize(t.subscription_status)}` : ''}` },
-    { key: 'ends', header: 'Renews / ends', className: 'hidden md:table-cell', render: (t) => formatDate(t.ends_at) },
+    {
+      key: 'due',
+      header: 'Due date',
+      className: 'hidden md:table-cell',
+      render: (t) =>
+        t.due_at ? (
+          <span className={t.overdue ? 'font-medium text-[#ff3e1d]' : undefined}>
+            {formatDate(t.due_at)}
+            {t.overdue && <span className="block text-xs">Overdue</span>}
+          </span>
+        ) : (
+          '—'
+        ),
+    },
     { key: 'usage', header: 'Branches · users · POS', className: 'hidden lg:table-cell', render: (t) => `${t.usage.branches} · ${t.usage.users} · ${t.usage.terminals}` },
     { key: 'created', header: 'Joined', className: 'hidden xl:table-cell', render: (t) => formatDate(t.created_at) },
     { key: 'status', header: 'Status', render: (t) => <Badge tone={TENANT_TONE[t.status] ?? 'neutral'}>{humanize(t.status)}</Badge> },
@@ -37,6 +50,11 @@ export default function AdminTenantsPage() {
                 {humanize(s)}
               </option>
             ))}
+          </Select>
+          <Select aria-label="Due" className="sm:w-44" value={f.due ?? ''} onChange={(e) => setF({ ...f, page: 1, due: e.target.value || undefined })}>
+            <option value="">Any due date</option>
+            <option value="overdue">Overdue</option>
+            <option value="soon">Due in 7 days</option>
           </Select>
         </FilterBar>
         {q.isError ? (

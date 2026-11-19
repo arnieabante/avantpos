@@ -82,7 +82,7 @@ class DashboardController extends Controller
                 'last_30_days' => (string) Money::of((clone $paid)->sum('amount') ?: '0'),
                 'count_30_days' => (clone $paid)->count(),
                 'pending_verification' => BillingPayment::withoutTenantScope()->where('status', 'pending')->count(),
-                'recent' => BillingPayment::withoutTenantScope()->with(['tenant', 'invoice'])->whereIn('status', ['paid', 'pending'])->latest('id')->limit(8)->get()
+                'recent' => BillingPayment::withoutTenantScope()->with(['tenant', 'invoice' => fn ($q) => $q->withoutTenantScope()])->whereIn('status', ['paid', 'pending'])->latest('id')->limit(8)->get()
                     ->map(fn ($p) => [
                         'id' => $p->id, 'tenant' => $p->tenant?->name, 'invoice' => $p->invoice?->number, 'amount' => $p->amount,
                         'gateway' => $p->gateway, 'channel' => $p->channel, 'status' => $p->status, 'at' => ($p->paid_at ?? $p->created_at)?->toIso8601String(),

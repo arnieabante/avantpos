@@ -52,11 +52,17 @@ composer install --no-dev --optimize-autoloader
 cp .env.example .env    # then edit: see below
 php artisan key:generate
 php artisan migrate --force
-php artisan db:seed --force          # permissions, plans, PH addresses, first platform admin (never demo data)
+php artisan db:seed --force          # permissions, plans, PH addresses, first platform admin, launch businesses
 php artisan storage:link             # public logos / product photos on the local disk
 php artisan optimize                 # caches config, routes, events, views
 sudo chown -R deploy:www-data storage bootstrap/cache && sudo chmod -R ug+rwX storage bootstrap/cache
 ```
+
+**Launch businesses.** `db:seed` also creates the businesses listed in
+`backend/database/seeders/data/businesses.php` (users, plan trial, branch, POS counter, categories, brands,
+suppliers; no products). Edit the users' e-mail addresses to real ones first: production refuses the
+`*.test` placeholders. With `BUSINESS_SEED_PASSWORD` empty, each user gets a random password printed once.
+Running `db:seed` again skips businesses that already exist.
 
 ### Production `.env`
 
@@ -221,6 +227,11 @@ Make one small real payment after go-live. Bank details for manual transfers are
 2. Change the password and **turn on two-factor sign-in** (Admin → Settings).
 3. Review plans and prices (Admin → Plans), bank details and support contacts (Admin → Settings).
 4. Remove `PLATFORM_ADMIN_PASSWORD` from `.env`, then `php artisan config:cache`.
+5. Add your staff under **Admin → Admin team** with the least role they need (billing, support).
+
+Locked out (forgotten password or lost authenticator)? On the server:
+`php artisan avantpos:admin you@example.com --reset-2fa` prints a new password and turns off two-factor
+for that account (it also creates the account as a super admin if it does not exist).
 
 ## 10. Backups and restore
 
