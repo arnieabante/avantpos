@@ -94,7 +94,7 @@ AVANTPOS_APP_HOST=app.avantpos.ph
 AVANTPOS_MEDIA_DISK=public
 SANCTUM_STATEFUL_DOMAINS=app.avantpos.ph,*.avantpos.ph
 CORS_ALLOWED_ORIGINS=https://app.avantpos.ph
-CORS_ALLOWED_ORIGIN_PATTERNS=#^https://[a-z0-9-]+\.avantpos\.ph$#
+CORS_ALLOWED_ORIGIN_PATTERNS='#^https://[a-z0-9-]+\.avantpos\.ph$#'   # keep the quotes: unquoted, a value starting with # is a comment
 
 MAIL_MAILER=smtp
 MAIL_HOST=<smtp host>
