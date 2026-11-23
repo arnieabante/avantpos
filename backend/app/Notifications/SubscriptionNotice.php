@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Subscription;
+use App\Support\FrontendUrl;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -30,7 +31,8 @@ class SubscriptionNotice extends Notification implements ShouldQueue
     {
         $s = $this->subscription;
         $plan = $s->plan?->name ?? 'your plan';
-        $url = rtrim((string) config('avantpos.app.frontend_url'), '/').'/settings/billing';
+        // The business's own address (e.g. https://trd-motorshop.avantpos.co), like every other e-mail link.
+        $url = app(FrontendUrl::class)->forTenantId($s->tenant_id).'/settings/billing';
         $end = $s->current_period_end?->toFormattedDateString();
         $grace = $s->grace_ends_at?->toFormattedDateString();
 

@@ -627,6 +627,10 @@ function Register({ setup, sessionId, can, user }: { setup: PosSetup; sessionId:
 
 /* ------------------------------------------------------------------ pieces */
 
+/** Brand-colored circle around the cart's −/+ quantity buttons so they stand out. */
+// `!` because cn() doesn't merge classes, so these must beat IconButton's rounded-md / text-ink-muted / hover colors.
+const stepButton = 'rounded-full! border border-brand-500 bg-brand-50 text-brand-500! hover:bg-brand-500! hover:text-white!'
+
 function CartRow({ line, quoted, error, onOpen, onStep }: { line: CartLine; quoted: QuoteLine | undefined; error?: string; onOpen: () => void; onStep: (delta: '1' | '-1') => void }) {
   const unit = unitOf(line)
   const price = line.priceOverride ?? unit.price
@@ -645,11 +649,11 @@ function CartRow({ line, quoted, error, onOpen, onStep }: { line: CartLine; quot
         </span>
         {error && <span className="mt-1 block text-xs text-[#ff3e1d]">{error}</span>}
       </button>
-      <div className="flex items-center">
-        <IconButton label={`One less ${line.item.name}`} size="sm" onClick={() => onStep('-1')}>
+      <div className="flex items-center gap-1.5">
+        <IconButton label={`One less ${line.item.name}`} size="sm" className={stepButton} onClick={() => onStep('-1')}>
           <Minus className="size-3.5" />
         </IconButton>
-        <IconButton label={`One more ${line.item.name}`} size="sm" onClick={() => onStep('1')}>
+        <IconButton label={`One more ${line.item.name}`} size="sm" className={stepButton} onClick={() => onStep('1')}>
           <Plus className="size-3.5" />
         </IconButton>
       </div>

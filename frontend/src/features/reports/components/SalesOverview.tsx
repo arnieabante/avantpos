@@ -9,7 +9,7 @@ import { ApiError } from '@/lib/api/errors'
 import { formatMoney, formatNumber } from '@/lib/format'
 import { reportKeys, reportsApi } from '../api'
 import type { Kpis } from '../types'
-import { BarChart } from './BarChart'
+import { AreaChart } from './AreaChart'
 
 /** Change vs yesterday, as text (display only). */
 function versus(today: string, yesterday: string): string {
@@ -66,7 +66,7 @@ export function SalesOverview() {
         <Card className="lg:col-span-2">
           <CardHeader title="Net sales, last 30 days" actions={<Link to="/reports/sales" className="text-sm text-brand-500">Sales report</Link>} />
           <CardBody>
-            {d ? <BarChart data={d.series.map((s) => ({ label: s.date, value: s.net_sales, hint: s.date }))} label="Net sales per day, last 30 days" /> : <Skeleton className="h-44" />}
+            {d ? <AreaChart data={d.series.map((s) => ({ label: s.date, value: s.net_sales, hint: s.date }))} label="Net sales per day, last 30 days" /> : <Skeleton className="h-44" />}
           </CardBody>
         </Card>
         <Card>

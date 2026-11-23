@@ -4,6 +4,7 @@ namespace App\Services\Billing\Gateways;
 
 use App\Exceptions\DomainException;
 use App\Models\SubscriptionInvoice;
+use App\Support\FrontendUrl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 
@@ -36,8 +37,8 @@ class XenditGateway implements PaymentGateway
                 'description' => "AvantPOS subscription {$invoice->number}",
                 'payer_email' => $customerEmail,
                 'customer' => ['given_names' => $customerName, 'email' => $customerEmail],
-                'success_redirect_url' => config('avantpos.billing.return_url').'?paid='.$invoice->number,
-                'failure_redirect_url' => config('avantpos.billing.return_url'),
+                'success_redirect_url' => $this->returnUrl($invoice).'?paid='.$invoice->number,
+                'failure_redirect_url' => $this->returnUrl($invoice),
                 'invoice_duration' => max(3600, (int) now()->diffInSeconds($invoice->due_at, false)),
             ]);
 
@@ -82,5 +83,11 @@ class XenditGateway implements PaymentGateway
             reference: $p['payment_id'] ?? (string) $p['id'],
             raw: $p,
         );
+    }
+
+    /** Back to the business's own Subscription page (e.g. https://trd-motorshop.avantpos.co/settings/billing). */
+    private function returnUrl(SubscriptionInvoice $invoice): string
+    {
+        return app(FrontendUrl::class)->forTenantId($invoice->tenant_id).'/settings/billing';
     }
 }

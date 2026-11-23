@@ -26,38 +26,42 @@ export default function ProductsPage() {
   const categories = useQuery({ queryKey: catalogKeys.categories, queryFn: catalogApi.categories, staleTime: 60_000 })
   const topLevel = (categories.data ?? []).filter((c) => c.parent_id === null)
 
+  const statusBadges = (p: ProductListItem) => (
+    <div className="flex flex-wrap gap-1">
+      <Badge tone={p.is_active ? 'success' : 'neutral'}>{p.is_active ? 'Active' : 'Inactive'}</Badge>
+      {p.type === 'service' && <Badge tone="info">Service</Badge>}
+    </div>
+  )
+
   const columns: Column<ProductListItem>[] = [
     {
       key: 'product',
       header: 'Product',
       render: (p) => (
-        <div className="flex items-center gap-3">
-          <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-md bg-canvas">
+        <div className="flex items-start gap-3 md:items-center">
+          <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-md bg-canvas md:size-11">
             {p.image_url ? <img src={p.image_url} alt="" className="size-full object-cover" /> : <Package className="size-5 text-ink-subtle" aria-hidden="true" />}
           </div>
-          <div className="min-w-0">
-            <p className="truncate font-medium text-ink">{p.name}</p>
+          <div className="min-w-0 flex-1">
+            <p className="font-medium whitespace-normal break-words text-ink md:truncate">{p.name}</p>
             <p className="truncate text-xs text-ink-subtle">
               {p.variants_count > 1 ? `${p.variants_count} variants` : p.sku}
               {p.brand && ` · ${p.brand.name}`}
             </p>
+            {/* Phones: the other columns are hidden, so their details stack here. */}
+            <div className="mt-1 space-y-1 text-sm md:hidden">
+              <p className="text-ink-subtle">{p.category?.name ?? 'No category'}</p>
+              <p className="font-medium text-ink">{priceRange(p)}</p>
+              {statusBadges(p)}
+            </div>
           </div>
         </div>
       ),
     },
     { key: 'category', header: 'Category', className: 'hidden md:table-cell', render: (p) => p.category?.name ?? '—' },
-    { key: 'price', header: 'Price', align: 'right', render: (p) => <span className="whitespace-nowrap text-ink">{priceRange(p)}</span> },
+    { key: 'price', header: 'Price', align: 'right', className: 'hidden md:table-cell', render: (p) => <span className="whitespace-nowrap text-ink">{priceRange(p)}</span> },
     { key: 'unit', header: 'Unit', className: 'hidden lg:table-cell', render: (p) => p.base_unit ?? '—' },
-    {
-      key: 'status',
-      header: 'Status',
-      render: (p) => (
-        <div className="flex flex-wrap gap-1">
-          <Badge tone={p.is_active ? 'success' : 'neutral'}>{p.is_active ? 'Active' : 'Inactive'}</Badge>
-          {p.type === 'service' && <Badge tone="info">Service</Badge>}
-        </div>
-      ),
-    },
+    { key: 'status', header: 'Status', className: 'hidden md:table-cell', render: statusBadges },
   ]
 
   return (

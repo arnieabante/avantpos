@@ -125,9 +125,11 @@ class StockAdjustmentService
         }
 
         $total = BigDecimal::zero();
+        $costChanges = [];
         foreach ($this->inLockOrder($adjustment->items) as $item) {
             $variant = $variants[$item->product_variant_id];
             $qty = BigDecimal::of($item->qty);
+            $typedCost = $item->unit_cost;
             $field = 'items.'.$positions[$item->id].'.qty';
             $options = [
                 'reference_type' => 'stock_adjustment',
@@ -151,16 +153,27 @@ class StockAdjustmentService
             /** @var StockMovement $movement */
             $item->forceFill(['unit_cost' => $movement->unit_cost])->save();
             $total = $total->plus($movement->total_cost);
+
+            // Opening stock with a typed cost sets the product's reference cost,
+            // the same way a goods receipt does. A blank cost leaves it as is.
+            if ($isOpening && $typedCost !== null) {
+                $newCost = (string) BigDecimal::of($movement->unit_cost)->toScale(4, RoundingMode::HalfUp);
+                if ($variant->cost_price === null || ! BigDecimal::of($variant->cost_price)->isEqualTo($newCost)) {
+                    $costChanges[$variant->getKey()] = ['from' => $variant->cost_price, 'to' => $newCost];
+                    $variant->forceFill(['cost_price' => $newCost])->save();
+                }
+            }
         }
 
         $adjustment->forceFill(['status' => 'posted', 'posted_by' => $actor->getKey(), 'posted_at' => now()])->save();
 
-        $this->audit->log('stock_adjustment.posted', $adjustment, [], [
+        $this->audit->log('stock_adjustment.posted', $adjustment, [], array_filter([
             'number' => $adjustment->number,
             'reason_code' => $adjustment->reason_code,
             'lines' => $adjustment->items->count(),
             'value_change' => (string) $total->toScale(2, RoundingMode::HalfUp),
-        ]);
+            'cost_changes' => $costChanges ?: null,
+        ]));
 
         return $adjustment;
     }

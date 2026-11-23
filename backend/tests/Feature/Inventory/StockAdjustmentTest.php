@@ -2,6 +2,7 @@
 
 use App\Models\AuditLog;
 use App\Models\InventoryBalance;
+use App\Models\ProductVariant;
 use App\Models\StockAdjustment;
 use App\Models\StockMovement;
 use App\Models\Unit;
@@ -37,6 +38,22 @@ it('posts opening stock at the given cost and refuses a second opening', functio
         'reason_code' => 'opening', 'post' => true,
         'items' => [['product_variant_id' => $this->item, 'qty' => '5', 'unit_cost' => '9']],
     ])->assertUnprocessable()->assertJsonValidationErrors('items.0.product_variant_id');
+});
+
+it('updates the product cost from an opening stock cost, but not from a blank one', function () {
+    $other = createStockItem($this->units['pc']);
+    $cost = fn (int $id) => $this->asTenant($this->tenant, fn () => ProductVariant::query()->whereKey($id)->value('cost_price'));
+    $before = $cost($other);
+
+    $this->postJson('/api/v1/stock-adjustments', ['reason_code' => 'opening', 'post' => true, 'items' => [
+        ['product_variant_id' => $this->item, 'qty' => '10', 'unit_cost' => '45.50'],
+        ['product_variant_id' => $other, 'qty' => '10'],
+    ]])->assertCreated();
+
+    expect($cost($this->item))->toBe('45.5000')
+        ->and($cost($other))->toBe($before);
+    $this->asTenant($this->tenant, fn () => expect(AuditLog::query()->where('event', 'stock_adjustment.posted')->latest('id')->value('new_values'))
+        ->toHaveKey('cost_changes'));
 });
 
 it('removes stock for out-reasons whatever sign is typed, at FIFO cost', function () {

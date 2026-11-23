@@ -570,12 +570,12 @@ function ImageCard({ product, pending, onPending }: { product: Product | null; p
             if (file) void choose(file)
           }}
         />
-        <div className="mt-3 flex gap-2">
-          <Button variant="outline" size="sm" fullWidth loading={busy} onClick={() => input.current?.click()}>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" className="min-w-0 flex-1" loading={busy} onClick={() => input.current?.click()}>
             {preview ? 'Change image' : 'Add image'}
           </Button>
           {preview && (
-            <Button variant="secondary" size="sm" onClick={remove} disabled={busy}>
+            <Button variant="secondary" size="sm" className="shrink-0" onClick={remove} disabled={busy}>
               Remove
             </Button>
           )}

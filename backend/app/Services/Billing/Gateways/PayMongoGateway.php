@@ -4,6 +4,7 @@ namespace App\Services\Billing\Gateways;
 
 use App\Exceptions\DomainException;
 use App\Models\SubscriptionInvoice;
+use App\Support\FrontendUrl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 
@@ -36,8 +37,8 @@ class PayMongoGateway implements PaymentGateway
                 'billing' => ['email' => $customerEmail, 'name' => $customerName],
                 'line_items' => [['name' => "AvantPOS {$invoice->plan?->name} ({$invoice->billing_cycle})", 'quantity' => 1, 'amount' => $centavos, 'currency' => 'PHP']],
                 'payment_method_types' => ['gcash', 'paymaya', 'card', 'grab_pay', 'dob'],
-                'success_url' => config('avantpos.billing.return_url').'?paid='.$invoice->number,
-                'cancel_url' => config('avantpos.billing.return_url'),
+                'success_url' => $this->returnUrl($invoice).'?paid='.$invoice->number,
+                'cancel_url' => $this->returnUrl($invoice),
                 'send_email_receipt' => true,
             ]]]);
 
@@ -87,5 +88,11 @@ class PayMongoGateway implements PaymentGateway
             reference: data_get($payment, 'id'),
             raw: (array) $request->json()->all(),
         );
+    }
+
+    /** Back to the business's own Subscription page (e.g. https://trd-motorshop.avantpos.co/settings/billing). */
+    private function returnUrl(SubscriptionInvoice $invoice): string
+    {
+        return app(FrontendUrl::class)->forTenantId($invoice->tenant_id).'/settings/billing';
     }
 }
