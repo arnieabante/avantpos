@@ -16,6 +16,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
 {
@@ -86,6 +87,14 @@ class UserController extends Controller
         $this->users->sendPasswordReset($request->user(), $user);
 
         return ApiResponse::message("A password reset link has been sent to {$user->email}.");
+    }
+
+    public function setPassword(Request $request, User $user): JsonResponse
+    {
+        $data = $request->validate(['password' => ['required', 'string', 'confirmed', Password::defaults()]]);
+        $this->users->setPassword($request->user(), $user, $data['password']);
+
+        return ApiResponse::message("{$user->name} can now sign in with the new password and will be asked to change it.");
     }
 
     /**

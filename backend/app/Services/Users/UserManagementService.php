@@ -242,6 +242,34 @@ class UserManagementService
         $this->audit->log('user.password_reset_sent', $target);
     }
 
+    /**
+     * Owner / administrator sets a temporary password. The user must change it
+     * at their next sign-in and is signed out everywhere now.
+     */
+    public function setPassword(User $actor, User $target, string $password): User
+    {
+        $this->assertCanManage($actor, $target);
+
+        if ($actor->is($target)) {
+            throw new DomainException('Change your own password under My account.', 'CANNOT_CHANGE_SELF', 403);
+        }
+
+        if (! $target->isActive()) {
+            throw new DomainException('Activate the user before setting a new password.', 'USER_INACTIVE', 422);
+        }
+
+        return DB::transaction(function () use ($target, $password) {
+            $target->forceFill(['password' => $password, 'must_change_password' => true, 'remember_token' => null])->save();
+
+            $target->tokens()->delete();
+            DB::table('sessions')->where('user_id', $target->getKey())->delete();
+
+            $this->audit->log('user.password_set', $target);
+
+            return $target;
+        });
+    }
+
     public function roleOf(User $user): ?Role
     {
         /** @var Role|null */

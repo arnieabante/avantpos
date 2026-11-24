@@ -64,6 +64,7 @@ export const usersApi = {
   action: (id: number, action: 'activate' | 'deactivate') => api.post<TeamUser>(`${V1}/users/${id}/${action}`),
   clearPin: (id: number) => api.send('delete', `${V1}/users/${id}/pin`),
   sendPasswordReset: (id: number) => api.send('post', `${V1}/users/${id}/password-reset`),
+  setPassword: (id: number, password: string, password_confirmation: string) => api.send('put', `${V1}/users/${id}/password`, { password, password_confirmation }),
   assignableRoles: () => api.get<Role[]>(`${V1}/roles/assignable`),
 
   /* Invitations */

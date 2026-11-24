@@ -138,6 +138,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                 Route::delete('users/{user}/pin', [UserController::class, 'clearPin'])->name('users.pin.destroy');
                 Route::post('users/{user}/password-reset', [UserController::class, 'sendPasswordReset'])
                     ->middleware('throttle:6,1')->name('users.password-reset');
+                Route::put('users/{user}/password', [UserController::class, 'setPassword'])
+                    ->middleware('throttle:6,1')->name('users.password.update');
             });
 
             // User invitations

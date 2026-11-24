@@ -10,6 +10,7 @@ use App\Notifications\Auth\QueuedResetPassword;
 use App\Services\Users\InvitationService;
 use App\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 
 beforeEach(function () {
@@ -154,6 +155,28 @@ it('clears a forgotten PIN and sends a password reset link', function () {
 
     $this->postJson("/api/v1/users/{$this->cashierMain->id}/password-reset")->assertOk();
     Notification::assertSentTo($this->cashierMain, QueuedResetPassword::class);
+});
+
+it('lets an administrator set a temporary password that must be changed', function () {
+    $this->asTenant($this->tenant, fn () => $this->cashierMain->createToken('pos'));
+    $this->actingAsApi($this->admin);
+
+    $this->putJson("/api/v1/users/{$this->cashierMain->id}/password", ['password' => 'Temp-pass-123', 'password_confirmation' => 'nope'])
+        ->assertUnprocessable()->assertJsonValidationErrors('password');
+    $this->putJson("/api/v1/users/{$this->cashierMain->id}/password", ['password' => 'Temp-pass-123', 'password_confirmation' => 'Temp-pass-123'])
+        ->assertOk();
+
+    $user = User::withoutTenantScope()->findOrFail($this->cashierMain->id);
+    expect(Hash::check('Temp-pass-123', $user->password))->toBeTrue()
+        ->and($user->must_change_password)->toBeTrue()
+        ->and(DB::table('personal_access_tokens')->where('tokenable_id', $user->id)->where('tokenable_type', $user->getMorphClass())->count())->toBe(0)
+        ->and(AuditLog::query()->where('event', 'user.password_set')->exists())->toBeTrue();
+
+    // Not yourself, and never the owner.
+    $this->putJson("/api/v1/users/{$this->admin->id}/password", ['password' => 'Temp-pass-123', 'password_confirmation' => 'Temp-pass-123'])->assertForbidden();
+    $this->putJson("/api/v1/users/{$this->owner->id}/password", ['password' => 'Temp-pass-123', 'password_confirmation' => 'Temp-pass-123'])->assertForbidden();
+    // Needs users.manage.
+    $this->actingAsApi($this->managerSecond)->putJson("/api/v1/users/{$this->cashierSecond->id}/password", ['password' => 'Temp-pass-123', 'password_confirmation' => 'Temp-pass-123'])->assertForbidden();
 });
 
 it('rejects inactive or inaccessible branches when assigning', function () {

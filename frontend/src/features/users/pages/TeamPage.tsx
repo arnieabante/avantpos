@@ -22,7 +22,7 @@ import { useAction } from '@/hooks/useAction'
 import { ApiError } from '@/lib/api/errors'
 import { formatDateTime, initials } from '@/lib/format'
 import { usersApi, usersKeys, type UserFilters } from '../api'
-import { AddUserModal, EditUserModal, InviteModal } from '../components/UserModals'
+import { AddUserModal, EditUserModal, InviteModal, SetPasswordModal } from '../components/UserModals'
 import type { TeamUser } from '../types'
 
 export default function TeamPage() {
@@ -37,6 +37,7 @@ export default function TeamPage() {
   const [editing, setEditing] = useState<TeamUser | null>(null)
   const [inviting, setInviting] = useState(false)
   const [adding, setAdding] = useState(false)
+  const [resetting, setResetting] = useState<TeamUser | null>(null)
   const setFilter = (patch: Partial<UserFilters>) => setFilters((f) => ({ ...f, ...patch, page: patch.page ?? 1 }))
 
   const users = useQuery({ queryKey: usersKeys.list(filters), queryFn: () => usersApi.list(filters), placeholderData: (prev) => prev })
@@ -118,7 +119,8 @@ export default function TeamPage() {
         const items: DropdownItem[] = [{ key: 'edit', label: 'Edit', onSelect: () => setEditing(u) }]
         if (!isSelf) {
           if (u.status === 'active') {
-            items.push({ key: 'reset', label: 'Send password reset', onSelect: () => act(u, 'reset') })
+            items.push({ key: 'set-password', label: 'Reset password', onSelect: () => setResetting(u) })
+            items.push({ key: 'reset', label: 'Send password reset link', onSelect: () => act(u, 'reset') })
             if (u.has_pin) items.push({ key: 'pin', label: 'Clear POS PIN', onSelect: () => act(u, 'pin') })
             items.push({ key: 'deactivate', label: 'Deactivate', danger: true, onSelect: () => act(u, 'deactivate') })
           } else {
@@ -203,6 +205,7 @@ export default function TeamPage() {
       {editing && <EditUserModal user={editing} isSelf={editing.id === account.user.id} onClose={() => setEditing(null)} />}
       {inviting && <InviteModal onClose={() => setInviting(false)} />}
       {adding && <AddUserModal onClose={() => setAdding(false)} />}
+      {resetting && <SetPasswordModal user={resetting} onClose={() => setResetting(null)} />}
     </>
   )
 }

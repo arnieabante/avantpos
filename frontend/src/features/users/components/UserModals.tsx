@@ -167,6 +167,54 @@ export function AddUserModal({ onClose }: { onClose: () => void }) {
   )
 }
 
+/** Owner / administrator sets a temporary password; the user must change it at the next sign-in. */
+export function SetPasswordModal({ user, onClose }: { user: TeamUser; onClose: () => void }) {
+  const toast = useToast()
+
+  const form = useForm<{ password: string; password_confirmation: string }>({
+    initialValues: { password: '', password_confirmation: '' },
+    validate: (v) => ({
+      password: v.password ? undefined : 'Enter a temporary password.',
+      password_confirmation: v.password_confirmation === v.password ? undefined : 'The passwords do not match.',
+    }),
+    onSubmit: async (values) => {
+      await usersApi.setPassword(user.id, values.password, values.password_confirmation)
+      toast.success('Password changed', `Give ${user.name} the new password. They will be asked to choose their own when they sign in.`)
+      onClose()
+    },
+  })
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      dismissible={!form.submitting}
+      title={`Reset ${user.name}'s password`}
+      description={`Sets a temporary password for ${user.email}. They are signed out on all devices and must change it at their next sign-in.`}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose} disabled={form.submitting}>
+            Cancel
+          </Button>
+          <Button type="submit" form="set-password-form" loading={form.submitting}>
+            Reset password
+          </Button>
+        </>
+      }
+    >
+      <form id="set-password-form" onSubmit={form.handleSubmit} noValidate className="space-y-4">
+        <ApiErrorAlert error={form.formError} />
+        <FormField label="Temporary password" required error={form.errors.password}>
+          <PasswordInput {...form.field('password')} autoComplete="new-password" data-autofocus />
+        </FormField>
+        <FormField label="Confirm password" required error={form.errors.password_confirmation}>
+          <PasswordInput {...form.field('password_confirmation')} autoComplete="new-password" />
+        </FormField>
+      </form>
+    </Modal>
+  )
+}
+
 export function EditUserModal({ user, isSelf, onClose }: { user: TeamUser; isSelf: boolean; onClose: () => void }) {
   const queryClient = useQueryClient()
   const toast = useToast()
