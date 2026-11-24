@@ -1,4 +1,18 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
+
+/** True while the screen is phone-sized (narrower than Tailwind's `md`, 768px). */
+export function useIsPhone(): boolean {
+  const query = '(max-width: 767px)'
+  return useSyncExternalStore(
+    (onChange) => {
+      const list = window.matchMedia(query)
+      list.addEventListener('change', onChange)
+      return () => list.removeEventListener('change', onChange)
+    },
+    () => window.matchMedia(query).matches,
+    () => false,
+  )
+}
 
 /** `value`, updated only after it has stopped changing for `delay` ms. */
 export function useDebouncedValue<T>(value: T, delay: number): T {

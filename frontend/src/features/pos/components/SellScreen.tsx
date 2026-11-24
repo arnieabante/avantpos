@@ -28,7 +28,7 @@ import {
   type Cart,
   type CartLine,
 } from '../cart'
-import { cartStorage, useDebouncedValue } from '../hooks'
+import { cartStorage, useDebouncedValue, useIsPhone } from '../hooks'
 import { OfflineBar } from '../offline/OfflineBar'
 import { offlineBlockers, offlineQuote } from '../offline/pricing'
 import { buildOfflineSale } from '../offline/sale'
@@ -133,12 +133,15 @@ function Register({ setup, sessionId, can, user }: { setup: PosSetup; sessionId:
   /* ------------------------------------------------------------ items */
   const term = useDebouncedValue(entry.trim(), 300)
   const searchTerm = parseEntry(term).code
+  // Phones: no item list until something is searched (keeps the screen short and saves data).
+  const isPhone = useIsPhone()
+  const waitForSearch = isPhone && !searchTerm
   const remoteItems = useQuery({
     queryKey: posKeys.items(searchTerm, searchTerm ? null : categoryId),
     queryFn: () => posApi.items(searchTerm, searchTerm ? null : categoryId),
     placeholderData: keepPreviousData,
     staleTime: 30_000,
-    enabled: !isOffline,
+    enabled: !isOffline && !waitForSearch,
   })
   const localItems = useMemo(
     () => (isOffline ? searchCatalog(offline.catalog?.items ?? [], searchTerm, searchTerm ? null : categoryId) : []),
@@ -337,7 +340,7 @@ function Register({ setup, sessionId, can, user }: { setup: PosSetup; sessionId:
           />
         </form>
 
-        {topCategories.length > 0 && (
+        {topCategories.length > 0 && !isPhone && (
           <div role="tablist" aria-label="Categories" className="flex gap-2 overflow-x-auto pb-1">
             {[{ id: null, name: 'All', color: null }, ...topCategories].map((c) => (
               <button
@@ -361,7 +364,9 @@ function Register({ setup, sessionId, can, user }: { setup: PosSetup; sessionId:
           </div>
         )}
 
-        {items.isError ? (
+        {waitForSearch ? (
+          <p className="rounded-md border border-dashed border-line p-6 text-center text-sm text-ink-subtle">Scan a barcode or type a name to find items.</p>
+        ) : items.isError ? (
           <ApiErrorAlert error={ApiError.from(items.error)} />
         ) : items.isPending ? (
           <div className="flex justify-center p-8">
