@@ -52,7 +52,7 @@ export function AppLayout() {
         <div className="contents print:hidden">
           <Topbar onOpenSidebar={() => setDrawerOpen(true)} />
         </div>
-        <main id="main" className="mx-auto w-full max-w-[1440px] flex-1 px-4 pt-4 pb-8 sm:px-6">
+        <main id="main" className="mx-auto w-full max-w-[1440px] min-w-0 flex-1 px-4 pt-4 pb-8 sm:px-6">
           <EmailVerificationBanner />
           <SubscriptionBanner />
           <Outlet />

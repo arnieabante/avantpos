@@ -316,7 +316,7 @@ function Register({ setup, sessionId, can, user }: { setup: PosSetup; sessionId:
   const topCategories = setup.categories.filter((c) => c.parent_id === null)
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_420px]">
+    <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_420px]">
       {/* ---------------------------------------------------------------- items */}
       <OfflineBar offline={offline} isOffline={isOffline} />
       <section aria-label="Items" className="min-w-0 space-y-3">
@@ -329,7 +329,7 @@ function Register({ setup, sessionId, can, user }: { setup: PosSetup; sessionId:
           <Input
             ref={searchRef}
             aria-label="Scan or search items"
-            placeholder="Scan a barcode or type to search (3*code for 3 pcs)"
+            placeholder={isPhone ? 'Scan or search items' : 'Scan a barcode or type to search (3*code for 3 pcs)'}
             value={entry}
             onChange={(e) => setEntry(e.target.value)}
             onKeyDown={(e) => e.key === 'Escape' && setEntry('')}
@@ -406,7 +406,7 @@ function Register({ setup, sessionId, can, user }: { setup: PosSetup; sessionId:
       </section>
 
       {/* ---------------------------------------------------------------- cart */}
-      <section aria-label="Current sale" className="flex flex-col rounded-md border border-line bg-surface shadow-sm lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)]">
+      <section aria-label="Current sale" className="flex min-w-0 flex-col rounded-md border border-line bg-surface shadow-sm lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)]">
         <div className="flex items-center gap-2 border-b border-line p-3">
           {setup.features.customers ? (
             <Button size="sm" variant={cart.customer ? 'outline' : 'ghost'} leftIcon={<UserRound className="size-4" />} disabled={isOffline} onClick={() => setDialog({ kind: 'customer' })}>
@@ -654,7 +654,7 @@ function CartRow({ line, quoted, error, onOpen, onStep }: { line: CartLine; quot
         </span>
         {error && <span className="mt-1 block text-xs text-[#ff3e1d]">{error}</span>}
       </button>
-      <div className="flex items-center gap-1.5">
+      <div className="flex shrink-0 items-center gap-1.5">
         <IconButton label={`One less ${line.item.name}`} size="sm" className={stepButton} onClick={() => onStep('-1')}>
           <Minus className="size-3.5" />
         </IconButton>
@@ -662,7 +662,7 @@ function CartRow({ line, quoted, error, onOpen, onStep }: { line: CartLine; quot
           <Plus className="size-3.5" />
         </IconButton>
       </div>
-      <div className="w-24 text-right">
+      <div className="w-20 shrink-0 text-right sm:w-24">
         <span className={cn('block text-sm font-medium tabular-nums', quoted ? 'text-ink' : 'text-ink-subtle')}>{formatMoney(quoted?.line_total ?? estimate)}</span>
         {discounted && <span className="block text-xs text-ink-subtle line-through tabular-nums">{formatMoney(quoted.gross)}</span>}
       </div>
